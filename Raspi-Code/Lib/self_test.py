@@ -3,13 +3,16 @@ import time
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(26, GPIO.OUT)
+GPIO.setup(17, GPIO.OUT)
 
 def Blink(numTimes, speed):
 	for i in range(0, numTimes):
 		print "Iteration "+str(i+1)
 		GPIO.output(26,True)
+		GPIO.output(17,True)
 		time.sleep(speed)
 		GPIO.output(26,False)
+		GPIO.output(17,False)
 		time.sleep(speed)
 	print "Done"
 	GPIO.cleanup()
