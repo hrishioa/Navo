@@ -22,11 +22,5 @@ for i in range(0,10):
 
 previr=0
 
-while True:
-	newir=GPIO.input(22)
-	if(newir!= previr):
-		print "IR Changed to %d." % (newir)
-		previr=newir
-
 
 GPIO.cleanup()
