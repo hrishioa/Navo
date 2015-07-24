@@ -19,10 +19,12 @@
 #    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
 #    MA 02111-1307, USA
 
+from sys import argv
 
 import smbus
 import time
 import math
+import Rpi.GPIO as GPIO
 from LSM9DS0 import *
 import datetime
 bus = smbus.SMBus(1)
@@ -32,6 +34,27 @@ M_PI = 3.14159265358979323846
 G_GAIN = 0.070  # [deg/s/LSB]  If you change the dps for gyro, you need to update this value accordingly
 LP = 0.041    	# Loop period = 41ms.   This needs to match the time it takes each loop to run
 AA =  0.80      # Complementary filter constant
+
+script,filename = argv
+
+#IO Setup
+r1p1 = 4
+r1p2 = 25
+r2p1 = 23
+r2p2 = 24
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(r1p1,GPIO.OUT)
+GPIO.setup(r1p2,GPIO.OUT)
+GPIO.setup(r2p1,GPIO.OUT)
+GPIO.setup(r2p2,GPIO.OUT)
+
+def relay1(status):
+	GPIO.output(r1p1,status)
+	GPIO.output(r1p2,status)
+
+def relay2(status):
+	GPIO.output(r2p1,status)
+	GPIO.output(r2p2,status)
 
 
 def writeACC(register,value):
@@ -141,11 +164,30 @@ gyroZangle = 0.0
 CFangleX = 0.0
 CFangleY = 0.0
 
+count=0
+countmax=500000
+countgrav=50
 
+gx=0.0
+gy=0.0
+gz=0.0
 
+speedx=0.0
+speedy=0.0
+speedz=0.0
+
+logfile = open(filename, 'w')
+logfile.write("GX,GY,GZ,AX,AY,AZ,SX,SY,SZ,TA,TS\n")
+
+speed=0
 
 while True:
 	a = datetime.datetime.now()
+
+	count+=1
+
+	if(count>countmax):
+		count=countgrav
 	
 	#Read our accelerometer,gyroscope and magnetometer  values
 	ACCx = readACCx()
@@ -174,10 +216,6 @@ while True:
 	gyroXangle+=rate_gyr_x*LP
 	gyroYangle+=rate_gyr_y*LP
 	gyroZangle+=rate_gyr_z*LP
-
-
-
-
 
         #Change the rotation value of the accelerometer to -/+ 180 and move the Y axis '0' point to up.
         #Two different pieces of code are used depending on how your IMU is mounted.
@@ -233,12 +271,31 @@ while True:
  	print ("\033[1;34;40mACCX Angle %5.2f ACCY Angle %5.2f\033[1;31;40m\tGRYX Angle %5.2f  GYRY Angle %5.2f  GYRZ Angle %5.2f \033[1;35;40m    \tCFangleX Angle %5.2f \033[1;36;40m  CFangleY Angle %5.2f \33[1;32;40m  HEADING  %5.2f \33[1;37;40m tiltCompensatedHeading %5.2f\033[0m  " % (AccXangle, AccYangle,gyroXangle,gyroYangle,gyroZangle,CFangleX,CFangleY,heading,tiltCompensatedHeading))
 
 
-        time.sleep(0.03)
+        time.sleep(0.01)
 	b = datetime.datetime.now()
 	c = b - a
 
 	print "Loop Time |",  c.microseconds/1000,"|",
 
+	if(count<countgrav):
+		print "Getting gravity..."
+		gx = ((gx*count)+ACCx)/(count+1)
+                gy = ((gy*count)+ACCy)/(count+1)
+                gz = ((gz*count)+ACCz)/(count+1)
+
+	ACCx2=float(ACCx-gx)
+	ACCy2=float(ACCy-gy)
+	ACCz2=float(ACCz-gz)
+
+	speedx+=(ACCx2)*(c.microseconds/1000000.0)
+        speedy+=(ACCy2)*(c.microseconds/1000000.0)
+        speedz+=(ACCz2)*(c.microseconds/1000000.0)
+
+	logfile.write("%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n" % (gx,gy,gz,ACCx,ACCy,ACCz,speedx,speedy,speedz,\
+						math.sqrt(speedx*speedx+speedy*speedy+speedz*speedz),math.sqrt(ACCx2*ACCx2+ACCy2*ACCy2+ACCz2*ACCz2)))
 
 
 
+
+
+	
