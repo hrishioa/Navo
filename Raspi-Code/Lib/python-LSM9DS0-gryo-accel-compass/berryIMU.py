@@ -1,30 +1,10 @@
-#!/usr/bin/python
-#
-#	This program  reads the angles from the acceleromter, gyrscope
-#	and mangnetometeron a BerryIMU connected to a Raspberry Pi.
-#
-#	http://ozzmaker.com/
-#
-#    Copyright (C) 2015  Mark Williams
-#    This library is free software; you can redistribute it and/or
-#    modify it under the terms of the GNU Library General Public
-#    License as published by the Free Software Foundation; either
-#    version 2 of the License, or (at your option) any later version.
-#    This library is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-#    Library General Public License for more details.
-#    You should have received a copy of the GNU Library General Public
-#    License along with this library; if not, write to the Free
-#    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-#    MA 02111-1307, USA
-
 from sys import argv
 
 import smbus
+import dweepy
 import time
 import math
-import Rpi.GPIO as GPIO
+import RPi.GPIO as GPIO
 from LSM9DS0 import *
 import datetime
 bus = smbus.SMBus(1)
@@ -38,15 +18,17 @@ AA =  0.80      # Complementary filter constant
 script,filename = argv
 
 #IO Setup
-r1p1 = 4
-r1p2 = 25
-r2p1 = 23
-r2p2 = 24
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(r1p1,GPIO.OUT)
-GPIO.setup(r1p2,GPIO.OUT)
-GPIO.setup(r2p1,GPIO.OUT)
-GPIO.setup(r2p2,GPIO.OUT)
+r2p1 = 4
+r2p2 = 25
+r1p1 = 23
+r1p2 = 24
+
+def relaysetup():
+	GPIO.setmode(GPIO.BCM)
+	GPIO.setup(r1p1,GPIO.OUT)
+	GPIO.setup(r1p2,GPIO.OUT)
+	GPIO.setup(r2p1,GPIO.OUT)
+	GPIO.setup(r2p2,GPIO.OUT)
 
 def relay1(status):
 	GPIO.output(r1p1,status)
@@ -55,6 +37,27 @@ def relay1(status):
 def relay2(status):
 	GPIO.output(r2p1,status)
 	GPIO.output(r2p2,status)
+
+tspeedx=0.0
+tspeedy=0.0
+tspeedz=0.0
+g  = None
+
+def get_dweet(add='hrishiopo'):
+	global tspeedx,tspeedy,tspeedz,g
+	try:
+		dweet = dweepy.get_latest_dweet_for(add)[0]
+		ax = float(dweet['content']['ax'])
+                ay = float(dweet['content']['ay'])
+                az = float(dweet['content']['az'])
+		
+		if(not g):
+			g = (float(dweet['content']['xg']),float(dweet['content']['yg']),float(dweet['content']['zg']))
+		ax-=g[0]
+		ay-=g[1]
+		az-=g[2]
+	except (KeyError, TypeError):
+		return
 
 
 def writeACC(register,value):

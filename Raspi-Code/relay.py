@@ -6,21 +6,29 @@ GPIO.setup(4, GPIO.OUT)
 GPIO.setup(24,GPIO.OUT)
 GPIO.setup(25,GPIO.OUT)
 GPIO.setup(23,GPIO.OUT)
-GPIO.setup(22,GPIO.IN)
+GPIO.setup(17,GPIO.IN)
 
 for i in range(0,10):
         GPIO.output(4, True)
-        GPIO.output(24,True)
-	GPIO.output(25,False)
+        GPIO.output(25,True)
+	GPIO.output(24,False)
 	GPIO.output(23,False)
 	time.sleep(0.25)
 	GPIO.output(4, False)
-	GPIO.output(24,False)
-        GPIO.output(25,True)
+	GPIO.output(25,False)
+        GPIO.output(24,True)
         GPIO.output(23,True)
 	time.sleep(0.25)
 
 previr=0
+pulses=0
+
+while(True):
+	newir=GPIO.input(17)
+	if(previr!=newir):
+		previr=newir
+		pulses+=1
+		print "Half Pulses: %d" %(pulses)
 
 
 GPIO.cleanup()
